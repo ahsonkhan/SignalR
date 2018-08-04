@@ -84,22 +84,26 @@ namespace Microsoft.AspNetCore.Internal
             return prop.Value<T>();
         }
 
-        public static string GetTokenString(JsonTokenType tokenType)
+        public static string GetTokenString(JsonValueType valueType, JsonTokenType tokenType)
         {
-            switch (tokenType)
+            switch (valueType)
             {
-                case JsonTokenType.None:
-                    break;
-                case JsonTokenType.StartObject:
-                    return JTokenType.Object.ToString();
-                case JsonTokenType.StartArray:
-                    return JTokenType.Array.ToString();
-                case JsonTokenType.PropertyName:
-                    return JTokenType.Property.ToString();
+                case JsonValueType.Number:
+                    return "Integer";
+                case JsonValueType.Unknown:
+                    if (tokenType == JsonTokenType.StartArray)
+                    {
+                        return JsonValueType.Array.ToString();
+                    }
+                    if (tokenType == JsonTokenType.StartObject)
+                    {
+                        return JsonValueType.Object.ToString();
+                    }
+                    return tokenType.ToString();
                 default:
                     break;
             }
-            return tokenType.ToString();
+            return valueType.ToString();
         }
 
         public static string GetTokenString(JsonToken tokenType)
@@ -120,19 +124,19 @@ namespace Microsoft.AspNetCore.Internal
             return tokenType.ToString();
         }
 
-        public static void EnsureObjectStart(Utf8JsonReader reader)
+        public static void EnsureObjectStart(ref Utf8JsonReader reader)
         {
             if (reader.TokenType != JsonTokenType.StartObject)
             {
-                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.TokenType)}'. Expected a JSON Object.");
+                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.ValueType, reader.TokenType)}'. Expected a JSON Object.");
             }
         }
 
-        public static void EnsureArrayStart(Utf8JsonReader reader)
+        public static void EnsureArrayStart(ref Utf8JsonReader reader)
         {
             if (reader.TokenType != JsonTokenType.StartArray)
             {
-                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.TokenType)}'. Expected a JSON Array.");
+                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.ValueType, reader.TokenType)}'. Expected a JSON Array.");
             }
         }
 
@@ -169,11 +173,11 @@ namespace Microsoft.AspNetCore.Internal
             return Convert.ToInt32(reader.Value, CultureInfo.InvariantCulture);
         }
 
-        public static int? ReadAsInt32(Utf8JsonReader reader, string propertyName)
+        public static int? ReadAsInt32(ref Utf8JsonReader reader, string propertyName)
         {
             reader.Read();
 
-            if (reader.TokenType != JsonTokenType.Value && reader.ValueType != JsonValueType.Number)
+            if (reader.TokenType != JsonTokenType.Value || reader.ValueType != JsonValueType.Number)
             {
                 throw new InvalidDataException($"Expected '{propertyName}' to be of type {JTokenType.Integer}.");
             }
@@ -201,16 +205,16 @@ namespace Microsoft.AspNetCore.Internal
             return reader.Value?.ToString();
         }
 
-        public static unsafe string ReadAsString(Utf8JsonReader reader, string propertyName)
+        public static unsafe string ReadAsString(ref Utf8JsonReader reader, string propertyName)
         {
             reader.Read();
 
-            if (reader.TokenType != JsonTokenType.Value && reader.ValueType != JsonValueType.String)
+            if (reader.TokenType != JsonTokenType.Value || reader.ValueType != JsonValueType.String)
             {
                 throw new InvalidDataException($"Expected '{propertyName}' to be of type {JTokenType.String}.");
             }
 
-            if (reader.Value.IsEmpty) return null;
+            if (reader.Value.IsEmpty) return "";
 
 #if NETCOREAPP2_2
             return Encoding.UTF8.GetString(reader.Value);
@@ -232,35 +236,7 @@ namespace Microsoft.AspNetCore.Internal
             return true;
         }
 
-        public static bool IsStartToken(JsonTokenType token)
-        {
-            switch (token)
-            {
-                case JsonTokenType.StartObject:
-                case JsonTokenType.StartArray:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        public static void Skip(Utf8JsonReader reader)
-        {
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                reader.Read();
-            }
-
-            if (IsStartToken(reader.TokenType))
-            {
-                //int depth = reader.Depth;
-                while (reader.Read())
-                {
-                }
-            }
-        }
-
-        public static bool CheckRead(Utf8JsonReader reader)
+        public static bool CheckRead(ref Utf8JsonReader reader)
         {
             if (!reader.Read())
             {

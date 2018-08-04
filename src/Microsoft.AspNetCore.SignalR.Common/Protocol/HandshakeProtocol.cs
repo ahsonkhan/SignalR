@@ -60,12 +60,12 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
         /// <param name="output">The output writer.</param>
         public static void WriteRequestMessage(HandshakeRequestMessage requestMessage, IBufferWriter<byte> output)
         {
-            Utf8JsonWriter<IBufferWriter<byte>> jsonWriter = Utf8JsonWriter.Create(output);
-            jsonWriter.WriteObjectStart();
-            jsonWriter.WriteAttribute(ProtocolPropertyName, requestMessage.Protocol);
-            jsonWriter.WriteAttribute(ProtocolVersionPropertyName, requestMessage.Version);
-            jsonWriter.WriteObjectEnd();
-            jsonWriter.Flush();
+            Utf8JsonWriter<IBufferWriter<byte>> writer = Utf8JsonWriter.Create(output);
+            writer.WriteObjectStart();
+            writer.WriteAttribute(ProtocolPropertyName, requestMessage.Protocol);
+            writer.WriteAttribute(ProtocolVersionPropertyName, requestMessage.Version);
+            writer.WriteObjectEnd();
+            writer.Flush();
 
             TextMessageFormatter.WriteRecordSeparator(output);
         }
@@ -77,17 +77,18 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
         /// <param name="output">The output writer.</param>
         public static void WriteResponseMessage(HandshakeResponseMessage responseMessage, IBufferWriter<byte> output)
         {
-            Utf8JsonWriter<IBufferWriter<byte>> jsonWriter = Utf8JsonWriter.Create(output);
+            Utf8JsonWriter<IBufferWriter<byte>> writer = Utf8JsonWriter.Create(output);
 
+            writer.WriteObjectStart();
             if (!string.IsNullOrEmpty(responseMessage.Error))
             {
-                jsonWriter.WriteAttribute(ErrorPropertyName, responseMessage.Error);
+                writer.WriteAttribute(ErrorPropertyName, responseMessage.Error);
             }
 
-            jsonWriter.WriteAttribute(MinorVersionPropertyName, responseMessage.MinorVersion);
+            writer.WriteAttribute(MinorVersionPropertyName, responseMessage.MinorVersion);
 
-            jsonWriter.WriteObjectEnd();
-            jsonWriter.Flush();
+            writer.WriteObjectEnd();
+            writer.Flush();
 
             TextMessageFormatter.WriteRecordSeparator(output);
         }
@@ -108,14 +109,17 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
 
             var reader = new Utf8JsonReader(payload);
 
-            JsonUtils.CheckRead(reader);
-            JsonUtils.EnsureObjectStart(reader);
+            byte[] temp = payload.ToArray();
+            string payStr = Encoding.UTF8.GetString(temp);
+
+            JsonUtils.CheckRead(ref reader);
+            JsonUtils.EnsureObjectStart(ref reader);
 
             int? minorVersion = null;
             string error = null;
 
             var completed = false;
-            while (!completed && JsonUtils.CheckRead(reader))
+            while (!completed && JsonUtils.CheckRead(ref reader))
             {
                 switch (reader.TokenType)
                 {
@@ -131,15 +135,15 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
                         }
                         else if (memberName.SequenceEqual(ErrorPropertyNameUtf8))
                         {
-                            error = JsonUtils.ReadAsString(reader, ErrorPropertyName);
+                            error = JsonUtils.ReadAsString(ref reader, ErrorPropertyName);
                         }
                         else if (memberName.SequenceEqual(MinorVersionPropertyNameUtf8))
                         {
-                            minorVersion = JsonUtils.ReadAsInt32(reader, MinorVersionPropertyName);
+                            minorVersion = JsonUtils.ReadAsInt32(ref reader, MinorVersionPropertyName);
                         }
                         else
                         {
-                            JsonUtils.Skip(reader);
+                            reader.Skip();
                         }
                         break;
                     case JsonTokenType.EndObject:
@@ -169,14 +173,14 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
             }
 
             var reader = new Utf8JsonReader(payload);
-            JsonUtils.CheckRead(reader);
-            JsonUtils.EnsureObjectStart(reader);
+            JsonUtils.CheckRead(ref reader);
+            JsonUtils.EnsureObjectStart(ref reader);
 
             string protocol = null;
             int? protocolVersion = null;
 
             var completed = false;
-            while (!completed && JsonUtils.CheckRead(reader))
+            while (!completed && JsonUtils.CheckRead(ref reader))
             {
                 switch (reader.TokenType)
                 {
@@ -185,15 +189,15 @@ namespace Microsoft.AspNetCore.SignalR.Protocol
 
                         if (memberName.SequenceEqual(ProtocolPropertyNameUtf8))
                         {
-                            protocol = JsonUtils.ReadAsString(reader, ProtocolPropertyName);
+                            protocol = JsonUtils.ReadAsString(ref reader, ProtocolPropertyName);
                         }
                         else if (memberName.SequenceEqual(ProtocolVersionPropertyNameUtf8))
                         {
-                            protocolVersion = JsonUtils.ReadAsInt32(reader, ProtocolVersionPropertyName);
+                            protocolVersion = JsonUtils.ReadAsInt32(ref reader, ProtocolVersionPropertyName);
                         }
                         else
                         {
-                            JsonUtils.Skip(reader);
+                            reader.Skip();
                         }
                         break;
                     case JsonTokenType.EndObject:
