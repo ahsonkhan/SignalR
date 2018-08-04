@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>Tests for users to verify their own implementations of SignalR types</Description>
-    <TargetFrameworks>netcoreapp3.0;net461</TargetFrameworks>
+    <TargetFrameworks>netcoreapp2.2;net461</TargetFrameworks>
   </PropertyGroup>
   
   <ItemGroup>

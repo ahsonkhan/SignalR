@@ -56,7 +56,7 @@
     <MicrosoftExtensionsSecurityHelperSourcesPackageVersion>3.0.0-alpha1-10173</MicrosoftExtensionsSecurityHelperSourcesPackageVersion>
     <MicrosoftExtensionsValueStopwatchSourcesPackageVersion>3.0.0-alpha1-10173</MicrosoftExtensionsValueStopwatchSourcesPackageVersion>
     <MicrosoftExtensionsWebEncodersSourcesPackageVersion>3.0.0-alpha1-10173</MicrosoftExtensionsWebEncodersSourcesPackageVersion>
-    <MicrosoftNETCoreApp22PackageVersion>3.0.0-preview1-26710-03</MicrosoftNETCoreApp22PackageVersion>
+    <MicrosoftNETCoreApp22PackageVersion>2.2.0-preview1-26618-02</MicrosoftNETCoreApp22PackageVersion>
     <MicrosoftNETTestSdkPackageVersion>15.6.1</MicrosoftNETTestSdkPackageVersion>
     <MoqPackageVersion>4.7.49</MoqPackageVersion>
     <NETStandardLibrary20PackageVersion>2.0.3</NETStandardLibrary20PackageVersion>

@@ -6,7 +6,6 @@ using System.Buffers;
 using System.Buffers.Text;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.JsonLab;
@@ -213,7 +212,14 @@ namespace Microsoft.AspNetCore.Internal
 
             if (reader.Value.IsEmpty) return null;
 
-            return Encoding.UTF8.GetString((byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(reader.Value)), reader.Value.Length);
+#if NETCOREAPP2_2
+            return Encoding.UTF8.GetString(reader.Value);
+#else
+            fixed (byte* bytes = &MemoryMarshal.GetReference(reader.Value))
+            {
+                return Encoding.UTF8.GetString(bytes, reader.Value.Length);
+            }
+#endif
         }
 
         public static bool CheckRead(JsonTextReader reader)
