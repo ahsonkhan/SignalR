@@ -3,8 +3,13 @@
 
 using System;
 using System.Buffers;
+using System.Buffers.Text;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.JsonLab;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -80,6 +85,24 @@ namespace Microsoft.AspNetCore.Internal
             return prop.Value<T>();
         }
 
+        public static string GetTokenString(JsonTokenType tokenType)
+        {
+            switch (tokenType)
+            {
+                case JsonTokenType.None:
+                    break;
+                case JsonTokenType.StartObject:
+                    return JTokenType.Object.ToString();
+                case JsonTokenType.StartArray:
+                    return JTokenType.Array.ToString();
+                case JsonTokenType.PropertyName:
+                    return JTokenType.Property.ToString();
+                default:
+                    break;
+            }
+            return tokenType.ToString();
+        }
+
         public static string GetTokenString(JsonToken tokenType)
         {
             switch (tokenType)
@@ -96,6 +119,22 @@ namespace Microsoft.AspNetCore.Internal
                     break;
             }
             return tokenType.ToString();
+        }
+
+        public static void EnsureObjectStart(Utf8JsonReader reader)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject)
+            {
+                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.TokenType)}'. Expected a JSON Object.");
+            }
+        }
+
+        public static void EnsureArrayStart(Utf8JsonReader reader)
+        {
+            if (reader.TokenType != JsonTokenType.StartArray)
+            {
+                throw new InvalidDataException($"Unexpected JSON Token Type '{GetTokenString(reader.TokenType)}'. Expected a JSON Array.");
+            }
         }
 
         public static void EnsureObjectStart(JsonTextReader reader)
@@ -131,6 +170,26 @@ namespace Microsoft.AspNetCore.Internal
             return Convert.ToInt32(reader.Value, CultureInfo.InvariantCulture);
         }
 
+        public static int? ReadAsInt32(Utf8JsonReader reader, string propertyName)
+        {
+            reader.Read();
+
+            if (reader.TokenType != JsonTokenType.Value && reader.ValueType != JsonValueType.Number)
+            {
+                throw new InvalidDataException($"Expected '{propertyName}' to be of type {JTokenType.Integer}.");
+            }
+
+            if (reader.Value.IsEmpty)
+            {
+                return null;
+            }
+            if (!Utf8Parser.TryParse(reader.Value, out int value, out _))
+            {
+                throw new InvalidDataException($"Expected '{propertyName}' to be of type {JTokenType.Integer}.");
+            }
+            return value;
+        }
+
         public static string ReadAsString(JsonTextReader reader, string propertyName)
         {
             reader.Read();
@@ -143,7 +202,59 @@ namespace Microsoft.AspNetCore.Internal
             return reader.Value?.ToString();
         }
 
+        public static unsafe string ReadAsString(Utf8JsonReader reader, string propertyName)
+        {
+            reader.Read();
+
+            if (reader.TokenType != JsonTokenType.Value && reader.ValueType != JsonValueType.String)
+            {
+                throw new InvalidDataException($"Expected '{propertyName}' to be of type {JTokenType.String}.");
+            }
+
+            if (reader.Value.IsEmpty) return null;
+
+            return Encoding.UTF8.GetString((byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(reader.Value)), reader.Value.Length);
+        }
+
         public static bool CheckRead(JsonTextReader reader)
+        {
+            if (!reader.Read())
+            {
+                throw new InvalidDataException("Unexpected end when reading JSON.");
+            }
+
+            return true;
+        }
+
+        public static bool IsStartToken(JsonTokenType token)
+        {
+            switch (token)
+            {
+                case JsonTokenType.StartObject:
+                case JsonTokenType.StartArray:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        public static void Skip(Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.PropertyName)
+            {
+                reader.Read();
+            }
+
+            if (IsStartToken(reader.TokenType))
+            {
+                //int depth = reader.Depth;
+                while (reader.Read())
+                {
+                }
+            }
+        }
+
+        public static bool CheckRead(Utf8JsonReader reader)
         {
             if (!reader.Read())
             {

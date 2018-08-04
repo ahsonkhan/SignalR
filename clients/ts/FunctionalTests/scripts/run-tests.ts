@@ -165,7 +165,7 @@ function runKarma(karmaConfig) {
             return; // For good measure
         }
 
-        const serverPath = path.resolve(__dirname, "..", "bin", configuration, "netcoreapp2.2", "FunctionalTests.dll");
+        const serverPath = path.resolve(__dirname, "..", "bin", configuration, "netcoreapp3.0", "FunctionalTests.dll");
 
         debug(`Launching Functional Test Server: ${serverPath}`);
         let desiredServerUrl = "http://127.0.0.1:0";
